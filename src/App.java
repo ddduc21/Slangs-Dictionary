@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -20,13 +21,14 @@ import javax.swing.event.ListSelectionListener;
 class Controler {
     final String filename = "slang.txt";
     private Map<String, String> slangToDef;
-    private ArrayList<String> slangs;
-    private ArrayList<String> definitions;
-    private ArrayList<String> searchHistory;
-    private ArrayList<String> changeHistory;
+    private ArrayList<String> slangs = new ArrayList<>();
+    private ArrayList<String> definitions = new ArrayList<>();
+    private ArrayList<String> searchHistory = new ArrayList<>();
+    private ArrayList<String> changeHistory = new ArrayList<>();
 
     String searchWord(String word) {
-        searchHistory.add(word);
+        if (!searchHistory.contains(word))
+            searchHistory.add(word);
         return slangToDef.get(word);
     }
 
@@ -145,18 +147,21 @@ class Controler {
     }
 
     String[] random4() {
+        Random random = new Random();
         String[] randomSlang = new String[8];
         int[] randomNumber = new int[4];
         for (int i = 0; i < 4; i++) {
             boolean duplicated = false;
             do {
                 duplicated = false;
-                Random random = new Random();
                 int index = random.nextInt(slangs.size());
                 for (int j = 0; j < i; j++) {
                     if (index == randomNumber[j]) {
                         duplicated = true;
                     }
+                }
+                if (!duplicated) {
+                    randomNumber[i] = index;
                 }
             } while (duplicated);
             randomSlang[i*2] = slangs.get(randomNumber[i]);
@@ -196,26 +201,63 @@ class View extends JFrame {
         this.setVisible(true);
     }
 
-    public JPanel menuNavigate() {
+    public JPanel menuNavigate(Controler controler) {
         JPanel panel = new JPanel();
         JMenuBar menu = new JMenuBar();
+        JMenuItem mainMenu = new JMenuItem("Home");
         JMenu editMenu = new JMenu("Edit");
         JMenu quizMenu = new JMenu("Quiz");
+        JMenuItem historyMenu = new JMenuItem("History");
 
         editMenu.add("Add slang");
         editMenu.add("Edit slang");
         editMenu.add("Delete slang");
         editMenu.add("Reset slang");
-        editMenu.add("History");
 
-        quizMenu.add("Guess definition by slang");
-        quizMenu.add("Guess slang by definition");
+        quizMenu.add("Guess definition by slang").addActionListener(
+            new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JPanel navTo = View.this.quizView(controler, "Guess definition by slang");
+                    View.this.setView(navTo);
+                }
+                
+            }
+        );
 
+        quizMenu.add("Guess slang by definition").addActionListener(
+            new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JPanel navTo = View.this.quizView(controler, "Guess slang by definition");
+                    View.this.setView(navTo);
+                }
+                
+            }
+        );
+
+        menu.add(mainMenu);
         menu.add(editMenu);
         menu.add(quizMenu);
+        menu.add(historyMenu);
 
         panel.add(menu);
         panel.setMaximumSize(panel.getPreferredSize());
+
+        mainMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                View.this.setView(View.this.mainMenuView(controler));
+            }
+        });
+
+        historyMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                View.this.setView(View.this.historyView(controler));
+            }
+            
+        });
         return panel;
     }
 
@@ -224,7 +266,7 @@ class View extends JFrame {
         BoxLayout menuLayout = new BoxLayout(mainPanel, BoxLayout.Y_AXIS);
         mainPanel.setLayout(menuLayout);
         
-        JPanel navPanel = menuNavigate();
+        JPanel navPanel = menuNavigate(controler);
         
         String[] searchChoices = { "Search by word", "Search by definition" };
         JPanel searchPanel = new JPanel();
@@ -237,6 +279,88 @@ class View extends JFrame {
         searchPanel.setMaximumSize(searchPanel.getPreferredSize());
 
         ArrayList<String> slangs = controler.getSlangs();
+
+        JPanel detailsPanel = new JPanel();
+
+        JList<String> list = new JList<>();
+        list.setListData(slangs.toArray(new String[slangs.size()]));
+
+        JTextArea detailsTextArea = new JTextArea(10, 30);
+        detailsTextArea.setEditable(false);
+        detailsTextArea.setText("");
+        detailsTextArea.setLineWrap(true);
+        detailsPanel.add(new JScrollPane(list));
+        detailsPanel.add(detailsTextArea);
+        list.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                String choseWord = list.getSelectedValue();
+                if (choseWord != null)
+                    detailsTextArea.setText(controler.searchWord(choseWord));
+                else
+                    detailsTextArea.setText("");
+            }
+        });
+
+        searchButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String searchString = searchTextField.getText();
+
+                if (searchString != "") {
+                    if (searchMethod.getSelectedItem() == "Search by word") {
+                        if (slangs.contains(searchString))
+                            list.setSelectedIndex(slangs.indexOf(searchString));
+                            list.ensureIndexIsVisible(list.getSelectedIndex());
+                    }
+                    else if (searchMethod.getSelectedItem() == "Search by definition") {
+                        ArrayList<String> searchResult = controler.searchDefinition(searchString);
+                        if (searchResult.size() > 0) {
+                            list.setListData(searchResult.toArray(new String[searchResult.size()]));
+                        }
+                        else {
+                            list.setListData(new String[0]);
+                        }
+                    }
+                }
+                else {
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
+            }
+        });
+
+        mainPanel.add(navPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(searchPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(detailsPanel);
+        mainPanel.add(Box.createHorizontalGlue());
+
+        addDebugBorder(navPanel);
+        addDebugBorder(searchPanel);
+        addDebugBorder(detailsPanel);
+        addDebugBorder(mainPanel);
+
+        return mainPanel;
+    }
+
+    public JPanel historyView(Controler controler) {
+        JPanel mainPanel = new JPanel();
+        BoxLayout menuLayout = new BoxLayout(mainPanel, BoxLayout.Y_AXIS);
+        mainPanel.setLayout(menuLayout);
+        
+        JPanel navPanel = menuNavigate(controler);
+        
+        String[] searchChoices = { "Search by word", "Search by definition" };
+        JPanel searchPanel = new JPanel();
+        JButton searchButton = new JButton("Search");
+        JComboBox<String> searchMethod = new JComboBox<String>(searchChoices);
+        JTextField searchTextField = new JTextField("search...", 30);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        searchPanel.add(searchMethod);
+        searchPanel.setMaximumSize(searchPanel.getPreferredSize());
+
+        ArrayList<String> slangs = controler.getSearchHistory();
 
         JPanel detailsPanel = new JPanel();
 
@@ -293,10 +417,115 @@ class View extends JFrame {
         mainPanel.add(detailsPanel);
         mainPanel.add(Box.createHorizontalGlue());
 
-        addDebugBorder(navPanel);
-        addDebugBorder(searchPanel);
-        addDebugBorder(detailsPanel);
-        addDebugBorder(mainPanel);
+        return mainPanel;
+    }
+
+    public JPanel quizView(Controler controler, String quizType) {
+        JPanel mainPanel = new JPanel();
+        BoxLayout mainLayout = new BoxLayout(mainPanel, BoxLayout.Y_AXIS);
+        mainPanel.setLayout(mainLayout);
+        
+        JPanel navPanel = menuNavigate(controler);
+
+        int questionNumber = 1;
+
+        JTextArea questionTextArea = new JTextArea("");
+        ButtonGroup answerGroup = new ButtonGroup();
+        JRadioButton[] answers = new JRadioButton[4];
+        for (int i = 0; i < 4; i++) {
+            answers[i] = new JRadioButton();
+            answerGroup.add(answers[i]);
+        }
+
+        JTextArea resultTextArea = new JTextArea(); 
+
+        JButton submitButton = new JButton("Confirm answer");
+        JButton nextButton = new JButton("Next");
+
+        class WorkAroundInt {
+            int a;
+            public WorkAroundInt(int a) {
+                this.a = a;
+            }
+            public int get() {
+                return a;
+            }
+
+            public void set(int a) {
+                this.a = a;
+            }  
+        }
+        Random random = new Random();
+        WorkAroundInt correctAnswerIndex = new WorkAroundInt(random.nextInt(4));
+
+        if (quizType == "Guess definition by slang") {
+            String[] quizData = controler.random4();
+            questionTextArea.setText(quizData[2*correctAnswerIndex.get()]);
+            for (int i = 0; i < 4; i++) {
+                answers[i].setText(quizData[2*i + 1]);
+            }
+
+            nextButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String[] quizData = controler.random4();
+                correctAnswerIndex.set(random.nextInt(4));
+                questionTextArea.setText(quizData[2*correctAnswerIndex.get()]);
+                for (int i = 0; i < 4; i++) {
+                    answers[i].setText(quizData[2*i + 1]);
+                    answers[i].setEnabled(true);
+                }
+                resultTextArea.setText("");
+                answerGroup.clearSelection();
+            }});
+        }
+        if (quizType == "Guess slang by definition") {
+            String[] quizData = controler.random4();
+            questionTextArea.setText(quizData[2*correctAnswerIndex.get() + 1]);
+            for (int i = 0; i < 4; i++) {
+                answers[i].setText(quizData[2*i]);
+            }
+
+            nextButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String[] quizData = controler.random4();
+                correctAnswerIndex.set(random.nextInt(4));
+                questionTextArea.setText(quizData[2*correctAnswerIndex.get() + 1]);
+                for (int i = 0; i < 4; i++) {
+                    answers[i].setText(quizData[2*i]);
+                    answers[i].setEnabled(true);
+                }
+                resultTextArea.setText("");
+                answerGroup.clearSelection();
+            }});
+        }
+
+        submitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (answers[correctAnswerIndex.get()].isSelected()) {
+                    resultTextArea.setText("Correct!");
+                }
+                else {
+                    resultTextArea.setText("Incorrect!");
+                }
+                for (int i = 0; i < answers.length; i++) {
+                    answers[i].setEnabled(false);
+                }
+            }
+        });
+
+        mainPanel.add(navPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(questionTextArea);
+        for (int i = 0; i < 4; i++) {
+            mainPanel.add(answers[i]);   
+        }
+        mainPanel.add(resultTextArea);
+        mainPanel.add(submitButton);
+        mainPanel.add(nextButton);
+        mainPanel.add(Box.createHorizontalGlue());
 
         return mainPanel;
     }
@@ -308,8 +537,9 @@ class View extends JFrame {
     }
 
     public void setView(JPanel view) {
-        contentPanel.removeAll();
-        contentPanel.add(view);
+        this.setContentPane(view);
+        view.setVisible(true);
+        this.pack();
     }
 }
 
