@@ -320,9 +320,14 @@ class View extends JFrame {
 
                 if (searchString != "") {
                     if (searchMethod.getSelectedItem() == "Search by word") {
-                        if (slangs.contains(searchString))
+                        if (slangs.contains(searchString)) {
                             list.setSelectedIndex(slangs.indexOf(searchString));
                             list.ensureIndexIsVisible(list.getSelectedIndex());
+                        }
+                        else {
+                            list.clearSelection();
+                            detailsTextArea.setText("Word not found");
+                        }
                     }
                     else if (searchMethod.getSelectedItem() == "Search by definition") {
                         ArrayList<String> searchResult = controler.searchDefinition(searchString);
@@ -335,6 +340,7 @@ class View extends JFrame {
                     }
                 }
                 else {
+                    detailsTextArea.setText("");
                     list.setListData(slangs.toArray(new String[slangs.size()]));
                 }
             }
