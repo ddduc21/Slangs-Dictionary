@@ -271,11 +271,14 @@ class View extends JFrame {
     }
 
     public JPanel mainMenuView(Controler controler) {
+        JPanel outerPanel = new JPanel(new BorderLayout());
+
         JPanel mainPanel = new JPanel();
         BoxLayout menuLayout = new BoxLayout(mainPanel, BoxLayout.Y_AXIS);
         mainPanel.setLayout(menuLayout);
         
         JPanel navPanel = menuNavigate(controler);
+        centerComponent(navPanel);
         
         String[] searchChoices = { "Search by word", "Search by definition" };
         JPanel searchPanel = new JPanel();
@@ -345,16 +348,19 @@ class View extends JFrame {
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(detailsPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        mainPanel.add(new JLabel("Word of the day: "));
-        mainPanel.add(new JLabel(wordOfTheDay[0] + ": " + wordOfTheDay[1]));
-        mainPanel.add(Box.createHorizontalGlue());
+        mainPanel.add(Box.createGlue());
 
-        addDebugBorder(navPanel);
-        addDebugBorder(searchPanel);
-        addDebugBorder(detailsPanel);
-        addDebugBorder(mainPanel);
+        JPanel randomWordPanel = new JPanel();
+        randomWordPanel.setLayout(new BoxLayout(randomWordPanel, BoxLayout.PAGE_AXIS));
+        randomWordPanel.add(Box.createRigidArea(new Dimension(20, 20)));
+        randomWordPanel.add(new JLabel("Word of the day: "), BorderLayout.PAGE_END);
+        randomWordPanel.add(new JLabel(wordOfTheDay[0] + ": " + wordOfTheDay[1]), BorderLayout.PAGE_END);
+        randomWordPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        return mainPanel;
+        outerPanel.add(mainPanel, BorderLayout.CENTER);
+        outerPanel.add(randomWordPanel, BorderLayout.PAGE_END);
+
+        return outerPanel;
     }
 
     public JPanel historyView(Controler controler) {
@@ -363,6 +369,7 @@ class View extends JFrame {
         mainPanel.setLayout(menuLayout);
         
         JPanel navPanel = menuNavigate(controler);
+        centerComponent(navPanel);
         
         String[] searchChoices = { "Search by word", "Search by definition" };
         JPanel searchPanel = new JPanel();
@@ -440,6 +447,7 @@ class View extends JFrame {
         mainPanel.setLayout(mainLayout);
         
         JPanel navPanel = menuNavigate(controler);
+        centerComponent(navPanel);
 
         JLabel questionTextArea = new JLabel("");
         ButtonGroup answerGroup = new ButtonGroup();
@@ -456,12 +464,15 @@ class View extends JFrame {
         JButton nextButton = new JButton("Next");
 
         quizControlPanel.add(Box.createRigidArea(new Dimension(30, 0)));
+        quizControlPanel.add(Box.createGlue());
         quizControlPanel.add(resultTextArea);
         quizControlPanel.add(Box.createGlue());
         quizControlPanel.add(submitButton);
         quizControlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         quizControlPanel.add(nextButton);
         quizControlPanel.add(Box.createRigidArea(new Dimension(30, 0)));
+        centerComponent(quizControlPanel);
+
         class WorkAroundInt {
             int a;
             public WorkAroundInt(int a) {
@@ -552,10 +563,6 @@ class View extends JFrame {
         }
         mainPanel.add(quizControlPanel);
         mainPanel.add(Box.createGlue());
-
-        addDebugBorder(navPanel);
-        addDebugBorder(questionTextArea);
-        addDebugBorder(quizControlPanel);
 
         return mainPanel;
     }
@@ -729,11 +736,6 @@ class View extends JFrame {
         mainPanel.add(editPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        addDebugBorder(navPanel);
-        addDebugBorder(searchPanel);
-        addDebugBorder(detailsPanel);
-        addDebugBorder(mainPanel);
-
         return mainPanel;
     }
 
@@ -741,6 +743,12 @@ class View extends JFrame {
         comp.setBorder(BorderFactory.createCompoundBorder(
                    BorderFactory.createLineBorder(Color.red),
                    comp.getBorder()));
+    }
+
+    public Component centerComponent(Component component) {
+        component.setMaximumSize(new Dimension(width, component.getPreferredSize().height));
+        component.setPreferredSize(component.getMaximumSize());
+        return component;
     }
 
     public void setView(JPanel view) {
