@@ -650,7 +650,12 @@ class View extends JFrame {
                         ArrayList<String> slangs = controler.getSlangs();
                         list.setListData(slangs.toArray(new String[slangs.size()]));
                     }
-                }   
+                }
+                else {
+                    controler.add(editSlang.getText(), editDefinition.getText());
+                    ArrayList<String> slangs = controler.getSlangs();
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
             } 
         });
 
