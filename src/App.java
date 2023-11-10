@@ -668,9 +668,14 @@ class View extends JFrame {
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                controler.edit(editSlang.getText(), editDefinition.getText());
-                ArrayList<String> slangs = controler.getSlangs();
-                list.setListData(slangs.toArray(new String[slangs.size()]));
+                if (controler.contain(editSlang.getText())) {
+                    controler.edit(editSlang.getText(), editDefinition.getText());
+                    ArrayList<String> slangs = controler.getSlangs();
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
+                else {
+                    JOptionPane.showMessageDialog(mainPanel, "Slang not found");
+                }
             }    
         });
 
@@ -680,9 +685,14 @@ class View extends JFrame {
                 int userChoice = JOptionPane.showConfirmDialog(mainPanel, 
                 "Do you really want to remove?", "Remove Item", JOptionPane.YES_NO_OPTION);
                 if (userChoice == 0) {
-                    controler.remove(editSlang.getText(), editDefinition.getText());
-                    ArrayList<String> slangs = controler.getSlangs();
-                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                    if (controler.contain(editSlang.getText())) {
+                        controler.remove(editSlang.getText(), editDefinition.getText());
+                        ArrayList<String> slangs = controler.getSlangs();
+                        list.setListData(slangs.toArray(new String[slangs.size()]));
+                    }
+                    else {
+                        JOptionPane.showMessageDialog(mainPanel, "Slang not found");
+                    }
                 }
             }    
         });
