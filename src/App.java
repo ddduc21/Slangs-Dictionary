@@ -1,10 +1,7 @@
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,7 +16,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 class Controler {
-    final String filename = "slang.txt";
+    final String filename = "test.txt";
     private Map<String, String> slangToDef;
     private ArrayList<String> slangs = new ArrayList<>();
     private ArrayList<String> definitions = new ArrayList<>();
@@ -43,10 +40,18 @@ class Controler {
     }
 
     void add(String word, String definition) {
-        slangToDef.put(word, definition);
-        slangs.add(word);
-        definitions.add(definition);
-        changeHistory.add("add`" + word + "`" + definition);
+        if (!contain(word)) {
+            slangToDef.put(word, definition);
+            slangs.add(word);
+            definitions.add(definition);
+            changeHistory.add("add`" + word + "`" + definition);
+        }
+        else {
+            changeHistory.add("edit`" + word + "`" + slangToDef.get(word));
+            slangToDef.put(word, slangToDef.get(word) + "| " + definition);
+            int wordIndex = slangs.indexOf(word);
+            definitions.set(wordIndex, definitions.get(wordIndex) + "| " + definition);
+        }
     }
 
     void edit(String word, String definition) {
@@ -85,15 +90,15 @@ class Controler {
                 }
                 case "remove": {
                     slangToDef.put(tokens[1], tokens[2]);
-                    int removeIndex = slangs.indexOf(tokens[1]);
-                    slangs.add(removeIndex, tokens[1]);
-                    definitions.add(removeIndex, tokens[2]);
+                    slangs.add(tokens[1]);
+                    definitions.add(tokens[2]);
                     break;
                 }
                 default:
                     break;
             }
         }
+        changeHistory.clear();
     }
 
     boolean contain(String word) {
@@ -130,7 +135,7 @@ class Controler {
                     String slang = slangs.get(slangs.size() - 1);
                     slangs.add(slang);
                     definitions.add(temp[0]);
-                    slangToDef.replace(slang, slangToDef.get(slang) + '`' + temp[0]);
+                    slangToDef.replace(slang, slangToDef.get(slang) + "| " + temp[0]);
                 }
             }
         } catch (IOException e) {
@@ -140,10 +145,14 @@ class Controler {
     }
 
     String[] random() {
-        Random random = new Random();
-        int index = random.nextInt(slangs.size());
-        String[] randomSlang = {slangs.get(index), definitions.get(index)};
-        return randomSlang;
+        if (slangs.size() > 0) { 
+            Random random = new Random();
+            int index = random.nextInt(slangs.size());
+            String[] randomSlang = {slangs.get(index), definitions.get(index)};
+            return randomSlang;
+        }
+        String[] strings = { "", "" };
+        return strings;
     }
 
     String[] random4() {
@@ -188,13 +197,11 @@ class Controler {
 }
 
 class View extends JFrame {
-    private Container contentPanel;
     private int width = 800;
     private int height = 600;
 
     public View() {
         super("Slangword collection!");
-        contentPanel = this.getContentPane();
         this.setPreferredSize(new Dimension(width, height));
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.pack();
@@ -205,14 +212,9 @@ class View extends JFrame {
         JPanel panel = new JPanel();
         JMenuBar menu = new JMenuBar();
         JMenuItem mainMenu = new JMenuItem("Home");
-        JMenu editMenu = new JMenu("Edit");
+        JMenuItem editMenu = new JMenuItem("Edit");
         JMenu quizMenu = new JMenu("Quiz");
         JMenuItem historyMenu = new JMenuItem("History");
-
-        editMenu.add("Add slang");
-        editMenu.add("Edit slang");
-        editMenu.add("Delete slang");
-        editMenu.add("Reset slang");
 
         quizMenu.add("Guess definition by slang").addActionListener(
             new ActionListener() {
@@ -235,6 +237,13 @@ class View extends JFrame {
                 
             }
         );
+
+        editMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                View.this.setView(View.this.editView(controler));
+            }    
+        });
 
         menu.add(mainMenu);
         menu.add(editMenu);
@@ -285,7 +294,7 @@ class View extends JFrame {
         JList<String> list = new JList<>();
         list.setListData(slangs.toArray(new String[slangs.size()]));
 
-        JTextArea detailsTextArea = new JTextArea(10, 30);
+        JTextArea detailsTextArea = new JTextArea(10, 40);
         detailsTextArea.setEditable(false);
         detailsTextArea.setText("");
         detailsTextArea.setLineWrap(true);
@@ -328,11 +337,16 @@ class View extends JFrame {
             }
         });
 
+        String[] wordOfTheDay = controler.random();
+
         mainPanel.add(navPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(searchPanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(detailsPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(new JLabel("Word of the day: "));
+        mainPanel.add(new JLabel(wordOfTheDay[0] + ": " + wordOfTheDay[1]));
         mainPanel.add(Box.createHorizontalGlue());
 
         addDebugBorder(navPanel);
@@ -367,7 +381,7 @@ class View extends JFrame {
         JList<String> list = new JList<>();
         list.setListData(slangs.toArray(new String[slangs.size()]));
 
-        JTextArea detailsTextArea = new JTextArea(10, 30);
+        JTextArea detailsTextArea = new JTextArea(10, 40);
         detailsTextArea.setEditable(false);
         detailsTextArea.setText("");
         detailsTextArea.setLineWrap(true);
@@ -427,9 +441,7 @@ class View extends JFrame {
         
         JPanel navPanel = menuNavigate(controler);
 
-        int questionNumber = 1;
-
-        JTextArea questionTextArea = new JTextArea("");
+        JLabel questionTextArea = new JLabel("");
         ButtonGroup answerGroup = new ButtonGroup();
         JRadioButton[] answers = new JRadioButton[4];
         for (int i = 0; i < 4; i++) {
@@ -437,11 +449,19 @@ class View extends JFrame {
             answerGroup.add(answers[i]);
         }
 
-        JTextArea resultTextArea = new JTextArea(); 
-
+        JPanel quizControlPanel = new JPanel();
+        quizControlPanel.setLayout(new BoxLayout(quizControlPanel, BoxLayout.LINE_AXIS));
+        JLabel resultTextArea = new JLabel(); 
         JButton submitButton = new JButton("Confirm answer");
         JButton nextButton = new JButton("Next");
 
+        quizControlPanel.add(Box.createRigidArea(new Dimension(30, 0)));
+        quizControlPanel.add(resultTextArea);
+        quizControlPanel.add(Box.createGlue());
+        quizControlPanel.add(submitButton);
+        quizControlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        quizControlPanel.add(nextButton);
+        quizControlPanel.add(Box.createRigidArea(new Dimension(30, 0)));
         class WorkAroundInt {
             int a;
             public WorkAroundInt(int a) {
@@ -450,17 +470,19 @@ class View extends JFrame {
             public int get() {
                 return a;
             }
-
             public void set(int a) {
                 this.a = a;
             }  
         }
+        WorkAroundInt questionNumber = new WorkAroundInt(1);
         Random random = new Random();
         WorkAroundInt correctAnswerIndex = new WorkAroundInt(random.nextInt(4));
 
         if (quizType == "Guess definition by slang") {
             String[] quizData = controler.random4();
-            questionTextArea.setText(quizData[2*correctAnswerIndex.get()]);
+            String question = "Q" + questionNumber.get() + ". " + quizData[2*correctAnswerIndex.get()];
+            questionNumber.set(questionNumber.get() + 1);
+            questionTextArea.setText(question);
             for (int i = 0; i < 4; i++) {
                 answers[i].setText(quizData[2*i + 1]);
             }
@@ -470,7 +492,9 @@ class View extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String[] quizData = controler.random4();
                 correctAnswerIndex.set(random.nextInt(4));
-                questionTextArea.setText(quizData[2*correctAnswerIndex.get()]);
+                String question = "Q" + questionNumber.get() + ". " + quizData[2*correctAnswerIndex.get()];
+                questionTextArea.setText(question);
+                questionNumber.set(questionNumber.get() + 1);
                 for (int i = 0; i < 4; i++) {
                     answers[i].setText(quizData[2*i + 1]);
                     answers[i].setEnabled(true);
@@ -481,7 +505,9 @@ class View extends JFrame {
         }
         if (quizType == "Guess slang by definition") {
             String[] quizData = controler.random4();
-            questionTextArea.setText(quizData[2*correctAnswerIndex.get() + 1]);
+            String question = "Q" + questionNumber.get() + ". " + quizData[2*correctAnswerIndex.get() + 1];
+            questionNumber.set(questionNumber.get() + 1);
+            questionTextArea.setText(question);
             for (int i = 0; i < 4; i++) {
                 answers[i].setText(quizData[2*i]);
             }
@@ -491,7 +517,9 @@ class View extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String[] quizData = controler.random4();
                 correctAnswerIndex.set(random.nextInt(4));
-                questionTextArea.setText(quizData[2*correctAnswerIndex.get() + 1]);
+                String question = "Q" + questionNumber.get() + ". " + quizData[2*correctAnswerIndex.get() + 1];
+                questionNumber.set(questionNumber.get() + 1);
+                questionTextArea.setText(question);
                 for (int i = 0; i < 4; i++) {
                     answers[i].setText(quizData[2*i]);
                     answers[i].setEnabled(true);
@@ -522,10 +550,189 @@ class View extends JFrame {
         for (int i = 0; i < 4; i++) {
             mainPanel.add(answers[i]);   
         }
-        mainPanel.add(resultTextArea);
-        mainPanel.add(submitButton);
-        mainPanel.add(nextButton);
+        mainPanel.add(quizControlPanel);
+        mainPanel.add(Box.createGlue());
+
+        addDebugBorder(navPanel);
+        addDebugBorder(questionTextArea);
+        addDebugBorder(quizControlPanel);
+
+        return mainPanel;
+    }
+    
+    public JPanel editView(Controler controler) {
+        JPanel mainPanel = new JPanel();
+        BoxLayout menuLayout = new BoxLayout(mainPanel, BoxLayout.Y_AXIS);
+        mainPanel.setLayout(menuLayout);
+
+        JPanel navPanel = menuNavigate(controler);
+        
+        String[] searchChoices = { "Search by word", "Search by definition" };
+        JPanel searchPanel = new JPanel();
+        JButton searchButton = new JButton("Search");
+        JComboBox<String> searchMethod = new JComboBox<String>(searchChoices);
+        JTextField searchTextField = new JTextField("search...", 30);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        searchPanel.add(searchMethod);
+        searchPanel.setMaximumSize(searchPanel.getPreferredSize());
+
+        ArrayList<String> slangs = controler.getSlangs();
+
+        JPanel detailsPanel = new JPanel();
+
+        JList<String> list = new JList<>();
+        list.setListData(slangs.toArray(new String[slangs.size()]));
+
+        JTextArea detailsTextArea = new JTextArea(10, 40);
+        detailsTextArea.setEditable(false);
+        detailsTextArea.setText("");
+        detailsTextArea.setLineWrap(true);
+        detailsPanel.add(new JScrollPane(list));
+        detailsPanel.add(detailsTextArea);
+
+        JPanel editPanel = new JPanel();
+        editPanel.setLayout(new BoxLayout(editPanel, BoxLayout.LINE_AXIS));
+
+        JPanel editTextPanel = new JPanel();
+        JPanel subPanel1 = new JPanel();
+        JPanel subPanel2 = new JPanel();
+        editTextPanel.setLayout(new BoxLayout(editTextPanel, BoxLayout.LINE_AXIS));
+        subPanel1.setLayout(new BoxLayout(subPanel1, BoxLayout.PAGE_AXIS));
+        subPanel2.setLayout(new BoxLayout(subPanel2, BoxLayout.PAGE_AXIS));
+        TextArea editSlang = new TextArea(1, 20);
+        TextArea editDefinition = new TextArea(4, 30);
+        subPanel1.add(new JLabel("Slang: "));
+        subPanel1.add(editSlang);
+        subPanel2.add(new JLabel("Definition: "));
+        subPanel2.add(editDefinition);
+        editTextPanel.add(subPanel1);
+        editTextPanel.add(subPanel2);
+
+        JButton addButton = new JButton("Add");
+        JButton editButton = new JButton("Edit");
+        JButton removeButton = new JButton("Remove");
+        JButton resetButton = new JButton("Reset");
+
+        editPanel.add(addButton);
+        editPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        editPanel.add(editButton);
+        editPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        editPanel.add(removeButton);
+        editPanel.add(Box.createRigidArea(new Dimension(10, 0)));
+        editPanel.add(resetButton);
+
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (controler.contain(editSlang.getText())) {
+                    String[] options = { "Add duplicate", "Overwrite", "Cancel" };
+                    int userChoice = JOptionPane.showOptionDialog(mainPanel, 
+                    "Do you want to make a duplicate or overwrite it?", 
+                    "The word already has definition", 
+                    JOptionPane.YES_NO_OPTION, 
+                    JOptionPane.QUESTION_MESSAGE, 
+                    null, options, options[2]);
+                    if (userChoice == 0) {
+                        controler.add(editSlang.getText(), editDefinition.getText());
+                        ArrayList<String> slangs = controler.getSlangs();
+                        list.setListData(slangs.toArray(new String[slangs.size()]));
+                    }
+                    else if (userChoice == 1) {
+                        controler.edit(editSlang.getText(), editDefinition.getText());
+                        ArrayList<String> slangs = controler.getSlangs();
+                        list.setListData(slangs.toArray(new String[slangs.size()]));
+                    }
+                }   
+            } 
+        });
+
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                controler.edit(editSlang.getText(), editDefinition.getText());
+                ArrayList<String> slangs = controler.getSlangs();
+                list.setListData(slangs.toArray(new String[slangs.size()]));
+            }    
+        });
+
+        removeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int userChoice = JOptionPane.showConfirmDialog(mainPanel, 
+                "Do you really want to remove?", "Remove Item", JOptionPane.YES_NO_OPTION);
+                if (userChoice == 0) {
+                    controler.remove(editSlang.getText(), editDefinition.getText());
+                    ArrayList<String> slangs = controler.getSlangs();
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
+            }    
+        });
+
+        resetButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                controler.resetDictionary();
+                ArrayList<String> slangs = controler.getSlangs();
+                list.setListData(slangs.toArray(new String[slangs.size()]));
+            }    
+        });
+
+        list.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                String choseWord = list.getSelectedValue();
+                if (choseWord != null) {
+                    detailsTextArea.setText(controler.searchWord(choseWord));
+                    editSlang.setText(choseWord);
+                    editDefinition.setText(controler.getDefinition(choseWord));
+                }
+                else
+                    detailsTextArea.setText("");
+            }
+        });
+
+        searchButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String searchString = searchTextField.getText();
+
+                if (searchString != "") {
+                    if (searchMethod.getSelectedItem() == "Search by word") {
+                        if (slangs.contains(searchString))
+                            list.setSelectedIndex(slangs.indexOf(searchString));
+                            list.ensureIndexIsVisible(list.getSelectedIndex());
+                    }
+                    else if (searchMethod.getSelectedItem() == "Search by definition") {
+                        ArrayList<String> searchResult = controler.searchDefinition(searchString);
+                        if (searchResult.size() > 0) {
+                            list.setListData(searchResult.toArray(new String[searchResult.size()]));
+                        }
+                        else {
+                            list.setListData(new String[0]);
+                        }
+                    }
+                }
+                else {
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
+            }
+        });
+
+        mainPanel.add(navPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(searchPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(detailsPanel);
         mainPanel.add(Box.createHorizontalGlue());
+        mainPanel.add(editTextPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(editPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        addDebugBorder(navPanel);
+        addDebugBorder(searchPanel);
+        addDebugBorder(detailsPanel);
+        addDebugBorder(mainPanel);
 
         return mainPanel;
     }
@@ -552,16 +759,3 @@ public class App {
         uiView.setView(uiView.mainMenuView(controler));
     }
 }
-
-/*
-1.Chức năng tìm kiếm theo slang word.
-2.Chức năng tìm kiếm theo definition, hiển thị ra tất cả các slang words mà trong defintion có chứa keyword gõ vào.
-3.Chức năng hiển thị history, danh sách các slang word đã tìm kiếm.
-4.Chức năng add 1 slang words mới. Nếu slang words trùng thì thông báo cho người dùng, confirm có overwrite hay duplicate ra 1 slang word mới.
-5.Chức năng edit 1 slang word.
-6.Chức năng delete 1 slang word. Confirm trước khi xoá.
-7.Chức năng reset danh sách slang words gốc.
-8.Chức năng random 1 slang word (On this day slang word).
-9.Chức năng đố vui, chương trình hiển thị 1 random slang word, với 4 đáp án cho người dùng chọn.
-10.Chức năng đố vui, chương trình hiển thị 1 definition, với 4 slang words đáp án cho người dùng chọn.
-*/
