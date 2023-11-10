@@ -42,3 +42,4 @@ lib/sqljdbc_12.4/enu/xa/xa_install.sql
 lib/sqljdbc_12.4/enu/xa/x64/sqljdbc_xa.dll
 lib/sqljdbc_12.4/enu/xa/x86/sqljdbc_xa.dll
 README.md
+bin/View$2.class

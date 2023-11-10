@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -20,15 +22,18 @@ class Controler {
     private Map<String, String> slangToDef;
     private ArrayList<String> slangs;
     private ArrayList<String> definitions;
+    private ArrayList<String> searchHistory;
+    private ArrayList<String> changeHistory;
 
-    String searchWord(String definition) {
-        return slangToDef.get(definition);
+    String searchWord(String word) {
+        searchHistory.add(word);
+        return slangToDef.get(word);
     }
 
-    ArrayList<String> searchDefinition(String word) {
+    ArrayList<String> searchDefinition(String definition) {
         ArrayList<String> arr = new ArrayList<>();
         for (int i = 0; i < definitions.size(); i++) {
-            if (definitions.get(i).indexOf(word) >= 0) {
+            if (definitions.get(i).indexOf(definition) >= 0) {
                 arr.add(slangs.get(i));
             }
         }
@@ -39,9 +44,11 @@ class Controler {
         slangToDef.put(word, definition);
         slangs.add(word);
         definitions.add(definition);
+        changeHistory.add("add`" + word + "`" + definition);
     }
 
     void edit(String word, String definition) {
+        changeHistory.add("edit`" + word + "`" + slangToDef.get(word));
         slangToDef.replace(word, definition);
         int index = slangs.indexOf(word);
         slangs.set(index, word);
@@ -53,6 +60,38 @@ class Controler {
         int index = slangs.indexOf(word);
         slangs.remove(index);
         definitions.remove(index);
+        changeHistory.add("remove`" + word + "`" + definition);
+    }
+
+    void resetDictionary() {
+        for (int index = changeHistory.size() - 1; index >= 0 ; index--) {
+            String[] tokens = changeHistory.get(index).split("`");
+            switch (tokens[0]) {
+                case "add": {
+                    slangToDef.remove(tokens[1], tokens[2]);
+                    int addIndex = slangs.indexOf(tokens[1]);
+                    slangs.remove(addIndex);
+                    definitions.remove(addIndex);
+                    break;
+                }
+                case "edit": {
+                    slangToDef.replace(tokens[1], tokens[2]);
+                    int editIndex = slangs.indexOf(tokens[1]);
+                    slangs.set(editIndex, tokens[1]);
+                    definitions.set(editIndex, tokens[2]);
+                    break;
+                }
+                case "remove": {
+                    slangToDef.put(tokens[1], tokens[2]);
+                    int removeIndex = slangs.indexOf(tokens[1]);
+                    slangs.add(removeIndex, tokens[1]);
+                    definitions.add(removeIndex, tokens[2]);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
     }
 
     boolean contain(String word) {
@@ -130,6 +169,10 @@ class Controler {
         return slangToDef.get(slang);
     }
 
+    ArrayList<String> getSearchHistory() {
+        return searchHistory;
+    }
+
     ArrayList<String> getSlangs() {
         return slangs;
     }
@@ -183,11 +226,14 @@ class View extends JFrame {
         
         JPanel navPanel = menuNavigate();
         
-        JPanel searchPanel = new JPanel();
-        searchPanel.add(new JTextField("search...", 30));
-        searchPanel.add(new JButton("Search"));
         String[] searchChoices = { "Search by word", "Search by definition" };
-        searchPanel.add(new JComboBox<String>(searchChoices));
+        JPanel searchPanel = new JPanel();
+        JButton searchButton = new JButton("Search");
+        JComboBox<String> searchMethod = new JComboBox<String>(searchChoices);
+        JTextField searchTextField = new JTextField("search...", 30);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        searchPanel.add(searchMethod);
         searchPanel.setMaximumSize(searchPanel.getPreferredSize());
 
         ArrayList<String> slangs = controler.getSlangs();
@@ -206,9 +252,37 @@ class View extends JFrame {
         list.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                // TODO Auto-generated method stub
                 String choseWord = list.getSelectedValue();
-                detailsTextArea.setText(controler.getDefinition(choseWord));
+                if (choseWord != null)
+                    detailsTextArea.setText(controler.getDefinition(choseWord));
+                else
+                    detailsTextArea.setText("");
+            }
+        });
+
+        searchButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String searchString = searchTextField.getText();
+
+                if (searchString != "") {
+                    if (searchMethod.getSelectedItem() == "Search by word") {
+                        if (slangs.contains(searchString))
+                            list.setSelectedIndex(slangs.indexOf(searchString));
+                            list.ensureIndexIsVisible(list.getSelectedIndex());
+                    }
+                    else if (searchMethod.getSelectedItem() == "Search by definition") {
+                        ArrayList<String> searchResult = controler.searchDefinition(searchString);
+                        if (searchResult.size() > 0) {
+                            list.setListData(searchResult.toArray(new String[searchResult.size()]));
+                        }
+                        else {
+                            list.setListData(new String[0]);
+                        }
+                    }
+                }
+                else {
+                    list.setListData(slangs.toArray(new String[slangs.size()]));
+                }
             }
         });
 
