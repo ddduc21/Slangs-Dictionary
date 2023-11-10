@@ -16,7 +16,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 class Controler {
-    final String filename = "test.txt";
+    final String filename = "slang.txt";
     private Map<String, String> slangToDef;
     private ArrayList<String> slangs = new ArrayList<>();
     private ArrayList<String> definitions = new ArrayList<>();
@@ -656,18 +656,22 @@ class View extends JFrame {
                         controler.add(editSlang.getText(), editDefinition.getText());
                         ArrayList<String> slangs = controler.getSlangs();
                         list.setListData(slangs.toArray(new String[slangs.size()]));
+                        controler.save();
                     }
                     else if (userChoice == 1) {
                         controler.edit(editSlang.getText(), editDefinition.getText());
                         ArrayList<String> slangs = controler.getSlangs();
                         list.setListData(slangs.toArray(new String[slangs.size()]));
+                        controler.save();
                     }
                 }
                 else {
                     controler.add(editSlang.getText(), editDefinition.getText());
                     ArrayList<String> slangs = controler.getSlangs();
                     list.setListData(slangs.toArray(new String[slangs.size()]));
+                    controler.save();
                 }
+
             } 
         });
 
@@ -678,6 +682,7 @@ class View extends JFrame {
                     controler.edit(editSlang.getText(), editDefinition.getText());
                     ArrayList<String> slangs = controler.getSlangs();
                     list.setListData(slangs.toArray(new String[slangs.size()]));
+                    controler.save();
                 }
                 else {
                     JOptionPane.showMessageDialog(mainPanel, "Slang not found");
@@ -695,6 +700,7 @@ class View extends JFrame {
                         controler.remove(editSlang.getText(), editDefinition.getText());
                         ArrayList<String> slangs = controler.getSlangs();
                         list.setListData(slangs.toArray(new String[slangs.size()]));
+                        controler.save();
                     }
                     else {
                         JOptionPane.showMessageDialog(mainPanel, "Slang not found");
@@ -709,6 +715,7 @@ class View extends JFrame {
                 controler.resetDictionary();
                 ArrayList<String> slangs = controler.getSlangs();
                 list.setListData(slangs.toArray(new String[slangs.size()]));
+                controler.save();
             }    
         });
 
